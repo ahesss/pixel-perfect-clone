@@ -18,6 +18,7 @@ const AIAgentToggle = () => {
         const bals = await getBalances(addressToFetch);
         setBalances(bals.usdc, bals.matic);
       }
+
       // 1. Fetch current price
       const priceStr = await fetchBtcPrice();
       setBtcPrice(priceStr);
@@ -26,18 +27,20 @@ const AIAgentToggle = () => {
       // 2. Predict movement
       const signal = predictMovement(priceNum);
 
+      // Log status
+      addLog("info", `[SYS] Scan: BTC=$${priceStr} | Bal=$${useBotStore.getState().usdcBalance}`);
+
       if (signal.prediction !== "NEUTRAL") {
-        addLog("info", `[AI] Prediction: ${signal.prediction} (${(signal.confidence * 100).toFixed(1)}% accuracy)`);
+        addLog("info", `[AI] Signal: ${signal.prediction} (${(signal.confidence * 100).toFixed(1)}% conf)`);
 
         // 3. Find target market
         const markets = await getActiveBTCMarkets();
         if (markets.length > 0) {
-          const targetMarket = markets[0]; // Take the most recent one
-          addLog("info", `[TRADING] Target Market Identified: ${targetMarket.question}`);
+          const targetMarket = markets[0];
+          addLog("info", `[TRADING] Target: ${targetMarket.question}`);
 
           if (dryRun) {
-            addLog("info", `[DRY RUN] Simulating ${signal.prediction} trade for $${tradeSize}`);
-            // Add a mock trade to history for visualization
+            addLog("info", `[DRY RUN] Simulating ${signal.prediction} for $${tradeSize}`);
             addTrade({
               time: new Date().toLocaleTimeString(),
               strat: "AI-BTC5M",
@@ -49,48 +52,49 @@ const AIAgentToggle = () => {
               pnl: "$0.00"
             });
           } else {
-            addLog("warn", `[LIVE] Executing real trade: ${signal.prediction} for $${tradeSize}...`);
+            addLog("warn", `[LIVE] Executing trade: ${signal.prediction} for $${tradeSize}...`);
 
             const creds = useBotStore.getState();
-            // Find tokenId for the predicted outcome
             const token = targetMarket.tokens.find(t => t.outcome === (signal.prediction === "UP" ? "YES" : "NO"));
 
             if (token) {
-              const result = await placeOrder(
-                creds,
-                token.tokenId,
-                0.55, // Aggressive entry to act as market order
-                parseFloat(tradeSize) / 0.55,
-                "BUY"
-              );
+              try {
+                const result = await placeOrder(
+                  creds,
+                  token.tokenId,
+                  0.55,
+                  parseFloat(tradeSize) / 0.55,
+                  "BUY"
+                );
 
-              addLog("info", `[LIVE] Order Placed Success! ID: ${result.orderID}`);
-              addTrade({
-                time: new Date().toLocaleTimeString(),
-                strat: "AI-BTC5M",
-                market: targetMarket.question,
-                side: signal.prediction === "UP" ? "YES" : "NO",
-                sideDir: signal.prediction === "UP" ? "â†—" : "â†˜",
-                entry: "$0.55",
-                result: "PENDING",
-                pnl: "$0.00"
-              });
+                addLog("info", `[LIVE] Success! ID: ${result.orderID}`);
+                addTrade({
+                  time: new Date().toLocaleTimeString(),
+                  strat: "AI-BTC5M",
+                  market: targetMarket.question,
+                  side: signal.prediction === "UP" ? "YES" : "NO",
+                  sideDir: signal.prediction === "UP" ? "â†—" : "â†˜",
+                  entry: "$0.55",
+                  result: "PENDING",
+                  pnl: "$0.00"
+                });
+              } catch (e: any) {
+                addLog("error", `Execution Failed: ${e.message}`);
+              }
             }
           }
         }
-      } else {
-        addLog("info", `[AI] Scanning markets... BTC=$${priceStr}`);
       }
     } catch (error) {
-      addLog("error", `Bot Cycle Error: ${error}`);
+      addLog("error", `Cycle Error: ${error}`);
     }
   };
 
   useEffect(() => {
     if (enabled) {
-      addLog("info", "AI Agent Started - Monitoring BTC 5-min markets");
-      runBotCycle(); // initial run
-      intervalRef.current = setInterval(runBotCycle, 10000); // Check every 10 seconds
+      addLog("info", "AI Agent Started");
+      runBotCycle();
+      intervalRef.current = setInterval(runBotCycle, 10000);
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
