@@ -1,15 +1,70 @@
 import { Bot } from "lucide-react";
-import { useState } from "react";
+import { useBotStore } from "@/hooks/useBotStore";
+import { useEffect, useRef } from "react";
+import { fetchBtcPrice } from "@/lib/binance";
+import { predictMovement } from "@/lib/ai-engine";
+import { getActiveBTCMarkets } from "@/lib/polymarket";
 
 const AIAgentToggle = () => {
-  const [enabled, setEnabled] = useState(false);
+  const { enabled, setEnabled, dryRun, tradeSize, addLog, setBtcPrice } = useBotStore();
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const runBotCycle = async () => {
+    try {
+      // 1. Fetch current price
+      const priceStr = await fetchBtcPrice();
+      setBtcPrice(priceStr);
+      const priceNum = parseFloat(priceStr.replace(/[^0-9.]/g, ""));
+
+      // 2. Predict movement
+      const signal = predictMovement(priceNum);
+
+      if (signal.prediction !== "NEUTRAL") {
+        addLog("info", `[AI] Prediction: ${signal.prediction} (${(signal.confidence * 100).toFixed(1)}% accuracy)`);
+
+        // 3. Find target market
+        const markets = await getActiveBTCMarkets();
+        if (markets.length > 0) {
+          const targetMarket = markets[0]; // Take the most recent one
+          addLog("info", `[TRADING] Target Market Identified: ${targetMarket.question}`);
+
+          if (dryRun) {
+            addLog("info", `[DRY RUN] Simulating ${signal.prediction} trade for $${tradeSize}`);
+          } else {
+            addLog("warn", `[LIVE] Attempting real trade for $${tradeSize}...`);
+            // real trade logic would call placeOrder here
+          }
+        }
+      } else {
+        addLog("info", `[AI] Scanning markets... BTC=$${priceStr}`);
+      }
+    } catch (error) {
+      addLog("error", `Bot Cycle Error: ${error}`);
+    }
+  };
+
+  useEffect(() => {
+    if (enabled) {
+      addLog("info", "AI Agent Started - Monitoring BTC 5-min markets");
+      runBotCycle(); // initial run
+      intervalRef.current = setInterval(runBotCycle, 10000); // Check every 10 seconds
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        addLog("warn", "AI Agent Stopped");
+      }
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [enabled]);
 
   return (
     <div className="rounded-lg border border-border bg-card p-5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Bot className="h-6 w-6 text-profit" />
-          <span className="font-semibold text-foreground">AI Agent — BTC 5min</span>
+          <Bot className={`h-6 w-6 ${enabled ? "text-profit animate-pulse" : "text-muted-foreground"}`} />
+          <span className="font-semibold text-foreground">AI Agent â€” BTC 5min</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground uppercase tracking-wider">
@@ -17,14 +72,12 @@ const AIAgentToggle = () => {
           </span>
           <button
             onClick={() => setEnabled(!enabled)}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              enabled ? "bg-profit" : "bg-secondary"
-            }`}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enabled ? "bg-profit" : "bg-secondary"
+              }`}
           >
             <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-foreground transition-transform ${
-                enabled ? "translate-x-6" : "translate-x-1"
-              }`}
+              className={`inline-block h-4 w-4 transform rounded-full bg-foreground transition-transform ${enabled ? "translate-x-6" : "translate-x-1"
+                }`}
             />
           </button>
         </div>
