@@ -32,7 +32,6 @@ export const getActiveBTCMarkets = async (): Promise<PM_Market[]> => {
 
 /**
  * Place Order on Polymarket CLOB
- * Note: Requires real credentials to work.
  */
 export const placeOrder = async (
     credentials: { apiKey: string; apiSecret: string; apiPassphrase: string; privateKey: string },
@@ -42,13 +41,40 @@ export const placeOrder = async (
     side: "BUY" | "SELL" = "BUY"
 ) => {
     if (!credentials.privateKey || !credentials.apiKey) {
-        throw new Error("Missing credentials");
+        throw new Error("Missing credentials for Live Trading");
     }
 
-    // logic for EIP-712 signing and clob auth goes here
-    // For demo/real execution, we wrap the CLOB API calls
-    console.log(`Placing ${side} order for ${tokenId} at ${price} with size ${size}`);
+    const wallet = new ethers.Wallet(credentials.privateKey);
+    const timestamp = Math.floor(Date.now() / 1000).toString();
 
-    // Implementation of signing and POST /order would follow the documentation
-    // Using ethers for EIP-712
+    // 1. Prepare Auth Signature (Header)
+    const authMessage = `${timestamp}POST/order`;
+    const authSig = await wallet.signMessage(authMessage);
+
+    // 2. Prepare Order Object
+    const orderBody = {
+        token_id: tokenId,
+        price: price,
+        size: size,
+        side: side,
+        orderType: "GTC",
+    };
+
+    try {
+        const response = await axios.post(`${CLOB_URL}/order`, orderBody, {
+            headers: {
+                "POLY_ADDRESS": wallet.address,
+                "POLY_API_KEY": credentials.apiKey,
+                "POLY_PASSPHRASE": credentials.apiPassphrase,
+                "POLY_TIMESTAMP": timestamp,
+                "POLY_SIGNATURE": authSig,
+                "Content-Type": "application/json"
+            }
+        });
+
+        return response.data;
+    } catch (error: any) {
+        console.error("CLOB Order Error:", error.response?.data || error.message);
+        throw new Error(error.response?.data?.error || "Execution Failed");
+    }
 };
