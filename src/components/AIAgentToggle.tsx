@@ -1,16 +1,23 @@
 import { Bot } from "lucide-react";
 import { useBotStore } from "@/hooks/useBotStore";
 import { useEffect, useRef } from "react";
+import { ethers } from "ethers";
 import { fetchBtcPrice } from "@/lib/binance";
 import { predictMovement } from "@/lib/ai-engine";
-import { getActiveBTCMarkets } from "@/lib/polymarket";
+import { getActiveBTCMarkets, getBalances, placeOrder } from "@/lib/polymarket";
 
 const AIAgentToggle = () => {
-  const { enabled, setEnabled, dryRun, tradeSize, addLog, setBtcPrice } = useBotStore();
+  const { enabled, setEnabled, dryRun, tradeSize, addLog, addTrade, setBtcPrice, setBalances, privateKey, proxyAddress } = useBotStore();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const runBotCycle = async () => {
     try {
+      // 0. Update Balances
+      const addressToFetch = proxyAddress || (privateKey ? new ethers.Wallet(privateKey).address : null);
+      if (addressToFetch) {
+        const bals = await getBalances(addressToFetch);
+        setBalances(bals.usdc, bals.matic);
+      }
       // 1. Fetch current price
       const priceStr = await fetchBtcPrice();
       setBtcPrice(priceStr);
