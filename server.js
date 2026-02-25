@@ -1,6 +1,10 @@
-const express = require('express');
-const path = require('path');
-const os = require('os');
+import express from 'express';
+import path from 'path';
+import os from 'os';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -12,9 +16,12 @@ app.use(express.static(path.join(__dirname, 'dist')));
 function getLocalIp() {
     const interfaces = os.networkInterfaces();
     for (const name of Object.keys(interfaces)) {
-        for (const iface of interfaces[name]) {
-            if (iface.family === 'IPv4' && !iface.internal) {
-                return iface.address;
+        const networkInterface = interfaces[name];
+        if (networkInterface) {
+            for (const iface of networkInterface) {
+                if (iface.family === 'IPv4' && !iface.internal) {
+                    return iface.address;
+                }
             }
         }
     }
@@ -25,7 +32,7 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-const server = app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', () => {
     const localIp = getLocalIp();
     console.log('\n================================================');
     console.log(`ðŸš€ POLYMARKET BOT RUNNING!`);
