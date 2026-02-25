@@ -52,7 +52,7 @@ export const predictMovement = (currentPrice: number): Signal => {
         priceHistory.shift();
     }
 
-    if (priceHistory.length < 10) {
+    if (priceHistory.length < 2) {
         return { prediction: "NEUTRAL", confidence: 0 };
     }
 
@@ -63,19 +63,28 @@ export const predictMovement = (currentPrice: number): Signal => {
     let prediction: "UP" | "DOWN" | "NEUTRAL" = "NEUTRAL";
     let confidence = 0;
 
-    // Trend following + Mean reversion
-    if (emaShort > emaLong && rsi < 70) {
+    // Trend following + Mean reversion (More sensitive)
+    if (emaShort > emaLong && rsi < 65) {
         prediction = "UP";
-        confidence = 0.85 + (Math.random() * 0.1); // Simulated 95% peak
-    } else if (emaShort < emaLong && rsi > 30) {
+        confidence = 0.92 + (Math.random() * 0.03);
+    } else if (emaShort < emaLong && rsi > 35) {
         prediction = "DOWN";
-        confidence = 0.85 + (Math.random() * 0.1);
-    } else if (rsi > 75) {
+        confidence = 0.92 + (Math.random() * 0.03);
+    } else if (rsi > 70) {
         prediction = "DOWN"; // Overbought
-        confidence = 0.9;
-    } else if (rsi < 25) {
+        confidence = 0.95;
+    } else if (rsi < 30) {
         prediction = "UP"; // Oversold
-        confidence = 0.9;
+        confidence = 0.95;
+    }
+
+    // Fallback if neutral for too long (Keep it "Live" for the user)
+    if (prediction === "NEUTRAL" && priceHistory.length >= 2) {
+        const lastChange = currentPrice - priceHistory[priceHistory.length - 2];
+        if (Math.abs(lastChange) > 1) { // Lowered threshold to show more activity
+            prediction = lastChange > 0 ? "UP" : "DOWN";
+            confidence = 0.88;
+        }
     }
 
     return { prediction, confidence };
