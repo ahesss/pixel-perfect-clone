@@ -7,7 +7,8 @@ const GAMMA_URL = "https://gamma-api.polymarket.com";
 export interface PM_Market {
     conditionId: string;
     question: string;
-    tokens: { outcome: string; tokenId: string }[];
+    volume?: string;
+    tokens: { outcome: string; tokenId: string; price?: string }[];
 }
 
 /**
@@ -16,14 +17,34 @@ export interface PM_Market {
 export const getActiveBTCMarkets = async (): Promise<PM_Market[]> => {
     try {
         const response = await axios.get(`${GAMMA_URL}/markets?active=true&query=BTC%20Up%20or%20Down`);
-        return response.data.map((m: any) => ({
+        const markets = response.data.map((m: any) => ({
             conditionId: m.conditionId,
             question: m.question,
+            volume: m.volume,
             tokens: m.clobTokenIds ? JSON.parse(m.clobTokenIds).map((id: string, i: number) => ({
                 outcome: i === 0 ? "YES" : "NO",
                 tokenId: id
             })) : []
         }));
+
+        // Fetch prices for all tokens
+        const tokenIds = markets.flatMap((m: any) => m.tokens.map((t: any) => t.tokenId));
+        if (tokenIds.length > 0) {
+            try {
+                const pricesRes = await axios.get(`${CLOB_URL}/last-trade-prices?token_ids=${tokenIds.join(",")}`);
+                const pricesMap = new Map(pricesRes.data.map((p: any) => [p.token_id, p.price]));
+
+                markets.forEach((m: any) => {
+                    m.tokens.forEach((t: any) => {
+                        t.price = pricesMap.get(t.tokenId) || "0.50";
+                    });
+                });
+            } catch (pErr) {
+                console.warn("Price fetch failed:", pErr);
+            }
+        }
+
+        return markets;
     } catch (error) {
         console.error("Error fetching markets:", error);
         return [];
