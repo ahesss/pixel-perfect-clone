@@ -31,6 +31,35 @@ export const getActiveBTCMarkets = async (): Promise<PM_Market[]> => {
 };
 
 /**
+ * Fetch USDC and MATIC balance on Polygon
+ */
+export const getBalances = async (address: string) => {
+    if (!address) return { usdc: "0.00", matic: "0.00" };
+
+    try {
+        const provider = new ethers.JsonRpcProvider("https://polygon-rpc.com");
+
+        // Fetch MATIC
+        const maticBalance = await provider.getBalance(address);
+        const maticFormatted = ethers.formatEther(maticBalance);
+
+        // Fetch USDC (Bridged USDC.e on Polygon)
+        const usdcAddress = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";
+        const usdcContract = new ethers.Contract(usdcAddress, ["function balanceOf(address) view returns (uint256)"], provider);
+        const usdcBalanceValue = await usdcContract.balanceOf(address);
+        const usdcFormatted = ethers.formatUnits(usdcBalanceValue, 6);
+
+        return {
+            usdc: parseFloat(usdcFormatted).toFixed(2),
+            matic: parseFloat(maticFormatted).toFixed(4)
+        };
+    } catch (error) {
+        console.error("Error fetching balances:", error);
+        return { usdc: "0.00", matic: "0.00" };
+    }
+};
+
+/**
  * Place Order on Polymarket CLOB
  */
 export const placeOrder = async (
