@@ -23,6 +23,8 @@ interface BotState {
     dryRun: boolean;
     tradeSize: string;
     btcPrice: string;
+    usdcBalance: string;
+    maticBalance: string;
     logs: Log[];
     trades: Trade[];
 
@@ -37,6 +39,7 @@ interface BotState {
     setDryRun: (dryRun: boolean) => void;
     setTradeSize: (size: string) => void;
     setBtcPrice: (price: string) => void;
+    setBalances: (usdc: string, matic: string) => void;
     addLog: (type: Log["type"], msg: string) => void;
     addTrade: (trade: Trade) => void;
     setCredentials: (creds: Partial<Pick<BotState, "privateKey" | "proxyAddress" | "apiKey" | "apiSecret" | "apiPassphrase">>) => void;
@@ -49,6 +52,8 @@ export const useBotStore = create<BotState>()(
             dryRun: true,
             tradeSize: "0.1",
             btcPrice: "0.00",
+            usdcBalance: "0.00",
+            maticBalance: "0.00",
             logs: [],
             trades: [],
             privateKey: "",
@@ -61,6 +66,7 @@ export const useBotStore = create<BotState>()(
             setDryRun: (dryRun) => set({ dryRun }),
             setTradeSize: (tradeSize) => set({ tradeSize }),
             setBtcPrice: (btcPrice) => set({ btcPrice }),
+            setBalances: (usdcBalance, maticBalance) => set({ usdcBalance, maticBalance }),
             addLog: (type, msg) => set((state) => ({
                 logs: [{ time: new Date().toLocaleTimeString(), type, msg }, ...state.logs].slice(0, 50)
             })),
