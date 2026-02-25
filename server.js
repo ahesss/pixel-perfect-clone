@@ -28,7 +28,8 @@ function getLocalIp() {
     return 'localhost';
 }
 
-app.get('/:path*', (req, res) => {
+// Final catch-all: Serve index.html for all other routes (SPA)
+app.use((req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
