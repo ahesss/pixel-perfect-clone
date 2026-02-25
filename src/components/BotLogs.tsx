@@ -1,18 +1,10 @@
 import { ChevronRight, Info, AlertTriangle } from "lucide-react";
 import { useState } from "react";
-
-const logs = [
-  { time: "21.40.52", type: "info", msg: "[AI] BTC=$66267 | 5 markets · 3 signals · 0 trades (LIVE)" },
-  { time: "21.40.52", type: "warn", msg: "[LIVE] GEO-BLOCKED: Trading restricted in your region, please refer to available regions - https://docs.polymarket.com/developers/CLOB/geoblock" },
-  { time: "21.40.43", type: "info", msg: "[AI] BTC=$66267 | 5 markets · 5 signals · 0 trades (LIVE)" },
-  { time: "21.40.43", type: "warn", msg: "[LIVE] GEO-BLOCKED: Trading restricted in your region, please refer to available regions - https://docs.polymarket.com/developers/CLOB/geoblock" },
-  { time: "21.40.33", type: "info", msg: "[AI] BTC=$66267 | 5 markets · 3 signals → 0 trades (LIVE)" },
-  { time: "21.40.33", type: "warn", msg: "[LIVE] GEO-BLOCKED: Trading restricted in your region, please refer to available regions - https://docs.polymarket.com/developers/CLOB/geoblock" },
-  { time: "21.40.24", type: "info", msg: "[AI] BTC=$66267 | 5 markets · 5 signals → 0 trades (LIVE)" },
-];
+import { useBotStore } from "@/hooks/useBotStore";
 
 const BotLogs = () => {
   const [open, setOpen] = useState(true);
+  const { logs } = useBotStore();
 
   return (
     <div className="rounded-lg border border-border bg-card p-5">
@@ -26,8 +18,11 @@ const BotLogs = () => {
 
       {open && (
         <div className="mt-4 space-y-2 max-h-80 overflow-y-auto">
+          {logs.length === 0 && (
+            <div className="text-xs text-muted-foreground font-mono italic">Waiting for activity...</div>
+          )}
           {logs.map((log, i) => (
-            <div key={i} className="flex gap-2 text-xs font-mono">
+            <div key={i} className="flex gap-2 text-xs font-mono animate-in fade-in slide-in-from-left-2 duration-300">
               {log.type === "info" ? (
                 <Info className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
               ) : (
