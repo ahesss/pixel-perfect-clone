@@ -30,9 +30,45 @@ const AIAgentToggle = () => {
 
           if (dryRun) {
             addLog("info", `[DRY RUN] Simulating ${signal.prediction} trade for $${tradeSize}`);
+            // Add a mock trade to history for visualization
+            addTrade({
+              time: new Date().toLocaleTimeString(),
+              strat: "AI-BTC5M",
+              market: targetMarket.question,
+              side: signal.prediction === "UP" ? "YES" : "NO",
+              sideDir: signal.prediction === "UP" ? "â†—" : "â†˜",
+              entry: "$0.50",
+              result: "PENDING",
+              pnl: "$0.00"
+            });
           } else {
-            addLog("warn", `[LIVE] Attempting real trade for $${tradeSize}...`);
-            // real trade logic would call placeOrder here
+            addLog("warn", `[LIVE] Executing real trade: ${signal.prediction} for $${tradeSize}...`);
+
+            const creds = useBotStore.getState();
+            // Find tokenId for the predicted outcome
+            const token = targetMarket.tokens.find(t => t.outcome === (signal.prediction === "UP" ? "YES" : "NO"));
+
+            if (token) {
+              const result = await placeOrder(
+                creds,
+                token.tokenId,
+                0.55, // Aggressive entry to act as market order
+                parseFloat(tradeSize) / 0.55,
+                "BUY"
+              );
+
+              addLog("info", `[LIVE] Order Placed Success! ID: ${result.orderID}`);
+              addTrade({
+                time: new Date().toLocaleTimeString(),
+                strat: "AI-BTC5M",
+                market: targetMarket.question,
+                side: signal.prediction === "UP" ? "YES" : "NO",
+                sideDir: signal.prediction === "UP" ? "â†—" : "â†˜",
+                entry: "$0.55",
+                result: "PENDING",
+                pnl: "$0.00"
+              });
+            }
           }
         }
       } else {
