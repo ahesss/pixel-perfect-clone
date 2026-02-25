@@ -1,8 +1,15 @@
 import { Settings, Eye, EyeOff, AlertTriangle } from "lucide-react";
 import { useState } from "react";
+import { useBotStore } from "@/hooks/useBotStore";
 
 const BotSettings = () => {
-  const [dryRun, setDryRun] = useState(false);
+  const {
+    dryRun, setDryRun,
+    tradeSize, setTradeSize,
+    privateKey, proxyAddress, apiKey, apiSecret, apiPassphrase,
+    setCredentials
+  } = useBotStore();
+
   const [showKeys, setShowKeys] = useState(false);
 
   return (
@@ -21,14 +28,12 @@ const BotSettings = () => {
           </div>
           <button
             onClick={() => setDryRun(!dryRun)}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              dryRun ? "bg-profit" : "bg-muted"
-            }`}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${dryRun ? "bg-profit" : "bg-muted"
+              }`}
           >
             <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-foreground transition-transform ${
-                dryRun ? "translate-x-6" : "translate-x-1"
-              }`}
+              className={`inline-block h-4 w-4 transform rounded-full bg-foreground transition-transform ${dryRun ? "translate-x-6" : "translate-x-1"
+                }`}
             />
           </button>
         </div>
@@ -39,7 +44,7 @@ const BotSettings = () => {
         <div className="rounded-lg border border-loss bg-loss/10 p-4 mb-4">
           <div className="flex items-center gap-2 text-loss font-semibold">
             <AlertTriangle className="h-5 w-5" />
-            LIVE MODE — Trading dengan uang nyata!
+            LIVE MODE â€” Trading dengan uang nyata!
           </div>
         </div>
       )}
@@ -50,8 +55,10 @@ const BotSettings = () => {
           TRADE SIZE (USDC)
         </label>
         <input
-          type="text"
-          defaultValue="0,2"
+          type="number"
+          step="0.1"
+          value={tradeSize}
+          onChange={(e) => setTradeSize(e.target.value)}
           className="w-full rounded-lg border border-border bg-secondary px-4 py-3 text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-ring"
         />
       </div>
@@ -59,7 +66,7 @@ const BotSettings = () => {
       {/* Wallet & API Credentials */}
       <div className="rounded-lg border border-border bg-card p-5">
         <div className="flex items-center gap-3 mb-5">
-          <span className="text-xl">🔑</span>
+          <span className="text-xl">ðŸ”‘</span>
           <span className="font-bold text-foreground">Wallet & API Credentials</span>
           <button onClick={() => setShowKeys(!showKeys)} className="text-muted-foreground">
             {showKeys ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -72,19 +79,21 @@ const BotSettings = () => {
 
         <div className="space-y-4">
           {[
-            "Private Key",
-            "Proxy Wallet Address",
-            "CLOB API Key",
-            "CLOB Secret",
-            "CLOB Passphrase",
-          ].map((label) => (
-            <div key={label}>
+            { label: "Private Key", key: "privateKey" },
+            { label: "Proxy Wallet Address", key: "proxyAddress" },
+            { label: "CLOB API Key", key: "apiKey" },
+            { label: "CLOB Secret", key: "apiSecret" },
+            { label: "CLOB Passphrase", key: "apiPassphrase" },
+          ].map((item) => (
+            <div key={item.key}>
               <label className="text-sm text-loss block mb-1.5">
-                {label} <span className="text-loss">*</span>
+                {item.label} <span className="text-loss">*</span>
               </label>
               <input
                 type={showKeys ? "text" : "password"}
-                defaultValue="abcdef1234567890abcdef1234567890"
+                value={(useBotStore.getState() as any)[item.key]}
+                onChange={(e) => setCredentials({ [item.key]: e.target.value })}
+                placeholder="Required for Live Trading"
                 className="w-full rounded-lg border border-border bg-secondary px-4 py-3 text-foreground font-mono text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               />
             </div>
