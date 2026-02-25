@@ -1,25 +1,9 @@
-import { CheckCircle } from "lucide-react";
-
-const trades = [
-  { time: "08.02.34", strat: "AI-BTC5M", market: "Bitcoin Up or Down - Februar...", side: "NO", sideDir: "↗", entry: "$0.49", result: "WIN", pnl: "+$0.10" },
-  { time: "08.02.34", strat: "AI-BTC5M", market: "Bitcoin Up or Down - Februar...", side: "NO", sideDir: "↗", entry: "$0.49", result: "WIN", pnl: "+$0.10" },
-  { time: "08.02.34", strat: "AI-BTC5M", market: "Bitcoin Up or Down - Februar...", side: "NO", sideDir: "↗", entry: "$0.49", result: "WIN", pnl: "+$0.10" },
-  { time: "08.02.33", strat: "AI-BTC5M", market: "Bitcoin Up or Down - Februar...", side: "NO", sideDir: "↗", entry: "$0.49", result: "WIN", pnl: "+$0.10" },
-  { time: "06.35.18", strat: "AI-BTC5M", market: "Bitcoin Up or Down - Februar...", side: "YES", sideDir: "↗", entry: "$0.51", result: "WIN", pnl: "+$0.49" },
-  { time: "06.35.17", strat: "AI-BTC5M", market: "Bitcoin Up or Down - Februar...", side: "YES", sideDir: "↗", entry: "$0.51", result: "WIN", pnl: "+$0.49" },
-  { time: "06.35.11", strat: "AI-BTC5M", market: "Bitcoin Up or Down - Februar...", side: "YES", sideDir: "↗", entry: "$0.51", result: "WIN", pnl: "+$0.49" },
-  { time: "06.35.10", strat: "AI-BTC5M", market: "Bitcoin Up or Down - Februar...", side: "YES", sideDir: "↗", entry: "$0.51", result: "WIN", pnl: "+$0.49" },
-  { time: "06.13.17", strat: "AI-BTC5M", market: "Bitcoin Up or Down - Februar...", side: "NO", sideDir: "↗", entry: "$0.49", result: "WIN", pnl: "+$0.51" },
-  { time: "06.13.14", strat: "AI-BTC5M", market: "Bitcoin Up or Down - Februar...", side: "NO", sideDir: "↗", entry: "$0.49", result: "WIN", pnl: "+$0.51" },
-  { time: "06.07.38", strat: "AI-BTC5M", market: "Bitcoin Up or Down - Februar...", side: "NO", sideDir: "↗", entry: "$0.49", result: "WIN", pnl: "+$0.51" },
-  { time: "06.03.05", strat: "AI-BTC5M", market: "Bitcoin Up or Down - Februar...", side: "NO", sideDir: "↗", entry: "$0.49", result: "WIN", pnl: "+$0.51" },
-  { time: "06.03.05", strat: "AI-BTC5M", market: "Bitcoin Up or Down - Februar...", side: "NO", sideDir: "↗", entry: "$0.49", result: "WIN", pnl: "+$0.51" },
-  { time: "06.03.05", strat: "AI-BTC5M", market: "Bitcoin Up or Down - Februar...", side: "NO", sideDir: "↗", entry: "$0.49", result: "WIN", pnl: "+$0.51" },
-  { time: "06.03.05", strat: "AI-BTC5M", market: "Bitcoin Up or Down - Februar...", side: "NO", sideDir: "↗", entry: "$0.49", result: "WIN", pnl: "+$0.51" },
-  { time: "06.03.04", strat: "AI-BTC5M", market: "Bitcoin Up or Down - Februar...", side: "NO", sideDir: "↗", entry: "$0.49", result: "WIN", pnl: "+$0.51" },
-];
+import { CheckCircle, XCircle, Clock } from "lucide-react";
+import { useBotStore } from "@/hooks/useBotStore";
 
 const TradeHistory = () => {
+  const { trades } = useBotStore();
+
   return (
     <div className="rounded-lg border border-border bg-card p-5">
       <div className="flex items-center justify-between mb-4">
@@ -41,15 +25,20 @@ const TradeHistory = () => {
             </tr>
           </thead>
           <tbody>
+            {trades.length === 0 && (
+              <tr>
+                <td colSpan={7} className="py-8 text-center text-muted-foreground italic">No trades executed yet.</td>
+              </tr>
+            )}
             {trades.map((t, i) => (
-              <tr key={i} className="border-t border-border/50">
+              <tr key={i} className="border-t border-border/50 animate-in fade-in duration-500">
                 <td className="py-3 pr-2 text-muted-foreground">{t.time}</td>
                 <td className="py-3 pr-2">
                   <span className="inline-block bg-secondary text-secondary-foreground rounded px-1.5 py-0.5 text-[10px] font-bold">
-                    AI-BTC5M
+                    {t.strat}
                   </span>
                 </td>
-                <td className="py-3 pr-2 text-foreground">{t.market}</td>
+                <td className="py-3 pr-2 text-foreground truncate max-w-[150px]">{t.market}</td>
                 <td className="py-3 pr-2">
                   <span className={t.side === "YES" ? "text-profit" : "text-warning"}>
                     {t.side} {t.sideDir}
@@ -57,11 +46,16 @@ const TradeHistory = () => {
                 </td>
                 <td className="py-3 pr-2 text-foreground">{t.entry}</td>
                 <td className="py-3 pr-2">
-                  <span className="flex items-center gap-1 text-profit">
-                    <CheckCircle className="h-3 w-3" /> WIN
+                  <span className={`flex items-center gap-1 ${t.result === "WIN" ? "text-profit" : t.result === "LOSS" ? "text-loss" : "text-muted-foreground"
+                    }`}>
+                    {t.result === "WIN" ? <CheckCircle className="h-3 w-3" /> :
+                      t.result === "LOSS" ? <XCircle className="h-3 w-3" /> :
+                        <Clock className="h-3 w-3 animate-spin" />} {t.result}
                   </span>
                 </td>
-                <td className="py-3 text-right text-profit font-semibold">{t.pnl}</td>
+                <td className={`py-3 text-right font-semibold ${t.pnl.startsWith("+") ? "text-profit" : "text-loss"}`}>
+                  {t.pnl}
+                </td>
               </tr>
             ))}
           </tbody>
